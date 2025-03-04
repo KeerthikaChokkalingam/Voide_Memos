@@ -1,8 +1,5 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-
 import 'introduction_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -19,7 +16,6 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     timer = Timer(const Duration(seconds: 3), () {
       Navigator.of(context).push(MaterialPageRoute(builder: (context) => const IntroductionScreen()));
-      // Change to your route
     });
   }
 

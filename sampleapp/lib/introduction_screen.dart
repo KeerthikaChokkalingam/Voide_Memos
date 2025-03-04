@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'package:sampleapp/new_recording_screen.dart';
 
 class IntroductionScreen extends StatefulWidget {
   const IntroductionScreen({super.key});
@@ -14,11 +15,10 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Image dimensions relative to screen size
-    final double firstImageWidth = screenWidth * 0.45; // Reduced width slightly
-    final double firstImageHeight = firstImageWidth * (202 / 197); // Maintain aspect ratio
-    final double secondImageWidth = screenWidth * 0.8; // Slightly reduced
-    final double secondImageHeight = secondImageWidth * (320 / 320); // Maintain aspect ratio
+    final double firstImageWidth = screenWidth * 0.45;
+    final double firstImageHeight = firstImageWidth * (202 / 197);
+    final double secondImageWidth = screenWidth * 0.8;
+    final double secondImageHeight = secondImageWidth * (320 / 320);
 
     return Scaffold(
       body: Container(
@@ -40,8 +40,8 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
               child: Stack(
                 children: [
                   Positioned(
-                    left: screenWidth * 0.02, // 2% padding from left
-                    top: screenHeight * 0.45 - (firstImageHeight / 2), // Center Y
+                    left: screenWidth * 0.02,
+                    top: screenHeight * 0.45 - (firstImageHeight / 2),
                     child: Image.asset(
                       'assets/images/Books-And-Headset.png',
                       width: firstImageWidth,
@@ -49,8 +49,8 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                     ),
                   ),
                   Positioned(
-                    left: screenWidth * 0.03 + (firstImageWidth * 0.25), // 90% of first image's width
-                    top: screenHeight * 0.45 - (secondImageHeight / 1.9), // Adjusted center
+                    left: screenWidth * 0.03 + (firstImageWidth * 0.25),
+                    top: screenHeight * 0.45 - (secondImageHeight / 1.9),
                     child: Image.asset(
                       'assets/images/Shapes-Design.png',
                       width: secondImageWidth,
@@ -58,9 +58,9 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                     ),
                   ),
                   Positioned(
-                    top: screenHeight * 0.5 + (secondImageHeight / 2) - 30, // 20px below second image
-                    left: screenWidth * 0.1, // 10% from left
-                    right: screenWidth * 0.1, // 10% from right
+                    top: screenHeight * 0.5 + (secondImageHeight / 2) - 30,
+                    left: screenWidth * 0.1,
+                    right: screenWidth * 0.1,
                     child: const Text(
                       "Speed your \n learning process ",
                       textAlign: TextAlign.center,
@@ -72,9 +72,9 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                     ),
                   ),
                   Positioned(
-                    top: screenHeight * 0.57 + (secondImageHeight / 2) + 20, // 20px below second image
-                    left: screenWidth * 0.1, // 10% from left
-                    right: screenWidth * 0.1, // 10% from right
+                    top: screenHeight * 0.57 + (secondImageHeight / 2) + 20,
+                    left: screenWidth * 0.1,
+                    right: screenWidth * 0.1,
                     child: const Text(
                       "Share your essays with your teacher",
                       textAlign: TextAlign.center,
@@ -86,13 +86,13 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                     ),
                   ),
                   Positioned(
-                    top: screenHeight * 0.6 + (secondImageHeight / 2) + 80, // 20px below second image
-                    left: screenWidth * 0.1, // 10% from left
-                    right: screenWidth * 0.1, // 10% from right
+                    top: screenHeight * 0.6 + (secondImageHeight / 2) + 80,
+                    left: screenWidth * 0.1,
+                    right: screenWidth * 0.1,
                     child: Bounceable(
                       onTap: () {
-
-                    }, child: Container(
+                        Navigator.of(context).push(MaterialPageRoute(builder: (context) => const NewRecordingScreen()));
+                      }, child: Container(
                       height: 54,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(35.0),
@@ -102,7 +102,7 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
                         child: Text(
                           "Getting Started",
                           style: TextStyle(
-                            fontSize: 18, // Responsive font size
+                            fontSize: 18,
                             fontWeight: FontWeight.normal,
                             color: Colors.white,
                           ),
