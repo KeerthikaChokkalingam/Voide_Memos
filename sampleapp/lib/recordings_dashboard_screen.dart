@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
 
+import 'create_recording_screen.dart';
+
 class NewRecordingScreen extends StatefulWidget {
   const NewRecordingScreen({super.key});
 
@@ -54,7 +56,9 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 40.0, right: 20.0),
                 child: Bounceable(
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CreateRecordingScreen()));
+                  },
                   child: Container(
                     width: 91,
                     height: 41,
@@ -180,6 +184,7 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
       child: Center(
         child: Bounceable(
           onTap: () {
+            Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CreateRecordingScreen()));
           },
           child: const Text(
             '   +  New Recording   ',
