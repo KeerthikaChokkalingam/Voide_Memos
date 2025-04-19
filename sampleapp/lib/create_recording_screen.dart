@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
@@ -29,11 +28,21 @@ int _elapsedSeconds = 0;
 int deniedCount = 0;
 final TextEditingController _firstController = TextEditingController();
 final TextEditingController _secondController = TextEditingController();
+bool isPlaying = false;
+bool isPaused = false;
 
 @override
 void initState(){
   super.initState();
   _audioPlayer = AudioPlayer();
+  _audioPlayer.playerStateStream.listen((state) {
+    if (state.processingState == ProcessingState.completed) {
+      setState(() {
+        isPlaying = false;
+        isPaused = false;
+      });
+    }
+  });
   _firstController.text = "";
   _secondController.text = "";
 }
@@ -178,7 +187,7 @@ Widget commontitleTextWidget(String titleText, bool isRequired) {
   );
 }
 
-Widget commonTextFieldWidget(String placeholderText,TextEditingController controller,FocusNode _focusNode) {
+Widget commonTextFieldWidget(String placeholderText,TextEditingController controller,FocusNode focusNode) {
   return Container(
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(10),
@@ -186,7 +195,7 @@ Widget commonTextFieldWidget(String placeholderText,TextEditingController contro
     ),
     child:TextFormField(
       controller: controller, // First TextField
-      focusNode: _focusNode,
+      focusNode: focusNode,
       textAlignVertical: TextAlignVertical.center,
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp("[A-Za-z0-9&@#+-. ]*")),
@@ -231,18 +240,42 @@ Widget recorderField() {
       Row(
         children: [
           Bounceable(
+            scaleFactor: 0.6,
             onTap: () async {
-              if (recordedFilePath != null) {
-                final player = AudioPlayer();
-                final processingState = _audioPlayer.processingState;
-                print("processingState $processingState");
-                await player.setFilePath(recordedFilePath!);
-                player.play();
+              if (recordedFilePath == null) return;
+              if (!isPlaying && !isPaused) {
+                await _audioPlayer.setFilePath(recordedFilePath!);
+                setState(() {
+                  isPlaying = true;
+                  isPaused = false;
+                });
+                await _audioPlayer.play();
               }
+
+              else if (isPlaying) {
+                await _audioPlayer.pause();
+                setState(() {
+                  isPlaying = false;
+                  isPaused = true;
+                });
+              }
+
+              else if (isPaused) {
+                setState(() {
+                  isPlaying = true;
+                  isPaused = false;
+                });
+                await _audioPlayer.play();
+              }
+
             },
             child: Visibility(
               visible: recordedFilePath != null,
-              child: Icon(Icons.play_circle, color: Color(0xFF5D5FEF), size: 20),
+              child: Icon(
+                isPlaying ? Icons.pause_circle : Icons.play_circle,
+                color: const Color(0xFF5D5FEF),
+                size: 24,
+              ),
             ),
           ),
           Bounceable(
