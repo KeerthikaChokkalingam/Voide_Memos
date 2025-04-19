@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
@@ -16,6 +17,7 @@ State<CreateRecordingScreen> createState() => CreateRecordingScreenState();
 
 class CreateRecordingScreenState extends State<CreateRecordingScreen> {
 final FocusNode _titleFocusNode = FocusNode();
+final FocusNode _topicFocusNode = FocusNode();
 
 final recorder = Record();
 late AudioPlayer _audioPlayer;
@@ -24,15 +26,24 @@ var buttenTapped = false;
 String? recordedFilePath;
 Timer? _timer;
 int _elapsedSeconds = 0;
+int deniedCount = 0;
+final TextEditingController _firstController = TextEditingController();
+final TextEditingController _secondController = TextEditingController();
 
 @override
 void initState(){
   super.initState();
   _audioPlayer = AudioPlayer();
+  _firstController.text = "";
+  _secondController.text = "";
 }
 @override
 void dispose(){
   _audioPlayer.dispose();
+  _firstController.dispose();
+  _secondController.dispose();
+  _titleFocusNode.unfocus();
+  _topicFocusNode.unfocus();
   super.dispose();
 }
 
@@ -54,7 +65,7 @@ void dispose(){
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 10.0, left: 10, right: 10),
-                  child: commonTextFieldWidget("Title"),
+                  child: commonTextFieldWidget("Enter Title",_firstController,_titleFocusNode),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 30.0, left: 10),
@@ -62,7 +73,7 @@ void dispose(){
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 10.0, left: 10, right: 10),
-                  child: commonTextFieldWidget("Topic"),
+                  child: commonTextFieldWidget("Enter Topic",_secondController,_topicFocusNode),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(top: 30.0, left: 10),
@@ -167,45 +178,31 @@ Widget commontitleTextWidget(String titleText, bool isRequired) {
   );
 }
 
-Widget commonTextFieldWidget(String placeholderText) {
+Widget commonTextFieldWidget(String placeholderText,TextEditingController controller,FocusNode _focusNode) {
   return Container(
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(10),
       color: const Color(0xFFECE3D9),
     ),
-    child: TextFormField(
-      onTapOutside: (event) {
-        _titleFocusNode.unfocus();
-      },
-      // controller: _searchController,
-      focusNode: _titleFocusNode,
+    child:TextFormField(
+      controller: controller, // First TextField
+      focusNode: _focusNode,
       textAlignVertical: TextAlignVertical.center,
-      onChanged: (value) {
-        // _onSearchChanged();
-      },
-      textCapitalization:
-      TextCapitalization.sentences,
-      // inputFormatters: <TextInputFormatter>[
-      //   CustomInputFormatter()
-      // ],
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp("[A-Za-z0-9&@#+-. ]*")),],
-      cursorColor: Colors.white,
-      enableInteractiveSelection: true,
-      // enabled: ref
-      //     .watch(globalSearchUINotifier)
-      //     .isSearch,
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp("[A-Za-z0-9&@#+-. ]*")),
+      ],
+      cursorColor: Colors.black,
       style: const TextStyle(
-        color: Colors.white,
+        color: Colors.black,
         fontSize: 15,
         decoration: TextDecoration.none,
       ),
       decoration: InputDecoration(
         border: InputBorder.none,
         hintText: placeholderText,
-        hintStyle:const TextStyle(
-          color:  Colors.black,
-            fontSize: 15,
-            height: 1,
+        hintStyle: const TextStyle(
+          color: Colors.grey,
+          fontSize: 15,
           fontWeight: FontWeight.normal,
         ),
         contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
@@ -221,23 +218,26 @@ Widget recorderField() {
       color: const Color(0xFFECE3D9),
     ),
     child: Padding(
-      padding: EdgeInsets.only(left: 10.0,right: 10),
+      padding: const EdgeInsets.only(left: 10.0,right: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text("File Audio"),
+           Text((recordedFilePath != null && _firstController.text.isNotEmpty) ? "${_firstController.text} Audio File" :"File Audio",style: const TextStyle(
+            color: Colors.grey,
+            fontSize: 15,
+            fontWeight: FontWeight.normal,
+          ),),
       Row(
         children: [
           Bounceable(
             onTap: () async {
               if (recordedFilePath != null) {
                 final player = AudioPlayer();
+                final processingState = _audioPlayer.processingState;
+                print("processingState $processingState");
                 await player.setFilePath(recordedFilePath!);
                 player.play();
-                // await _audioPlayer.setFilePath(recordedFilePath!);
-                // _audioPlayer.play();
-                print("Playing recording");
               }
             },
             child: Visibility(
@@ -279,14 +279,18 @@ Widget startRecording() {
         padding: const EdgeInsets.only(top: 25.0),
         child: Bounceable(
           onTap: () {
-            if (buttenTapped) {
-              _stopRecording();
+            if (deniedCount == 0){
+              if (buttenTapped) {
+                _stopRecording();
+              } else {
+                _requestMicrophonePermission();
+              }
+              setState(() {
+                buttenTapped = !buttenTapped;
+              });
             } else {
               _requestMicrophonePermission();
             }
-            setState(() {
-              buttenTapped = !buttenTapped;
-            });
           },
           child: Image.asset(
             'assets/images/record-button.png',
@@ -311,11 +315,40 @@ child: Text(
 Future<void> _requestMicrophonePermission() async {
   final PermissionStatus status = await Permission.microphone.request();
   if (status == PermissionStatus.granted) {
+    deniedCount = 0;
     _startRecording();
     // Permission granted, proceed with recording
   } else {
-    // Permission denied, handle accordingly (e.g., show a message to the user)
+    deniedCount++;
+    if (deniedCount > 2) {
+      deniedCount = 2;
+    }
+    if (deniedCount == 2) {
+      showSettingsDialog(context);
+    }
   }
+}
+void showSettingsDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Permission Required"),
+      content: const Text("Please enable microphone permission from settings."),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), // Close dialog
+          child: const Text("Cancel"),
+        ),
+        TextButton(
+          onPressed: () {
+            openAppSettings(); // Open device settings
+            Navigator.pop(context);
+          },
+          child: const Text("Open Settings"),
+        ),
+      ],
+    ),
+  );
 }
 Future<void> _startRecording() async {
   try {
@@ -323,7 +356,6 @@ Future<void> _startRecording() async {
       // Get the directory to save file
       final directory = await getApplicationDocumentsDirectory();
       final filePath = '${directory.path}/myFile_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      print("Recording started. File path: $filePath");
 
       await recorder.start(
         path: filePath,
@@ -338,10 +370,24 @@ Future<void> _startRecording() async {
       });
     } else {
       // Handle permission denied
-      print("Recording permission denied.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Recording permission denied.",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
+          backgroundColor: Color(0xFFECE3A3),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(bottom: 100,left: 10,right: 10),
+
+        ),
+      );
     }
   } catch (e) {
-    print("Start recording error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Start recording error",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
+        backgroundColor: Color(0xFFECE3A3),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(bottom: 100,left: 10,right: 10),
+
+      ),
+    );
   }
 }
 
@@ -349,7 +395,6 @@ Future<void> _stopRecording() async {
   try {
       final path = await recorder.stop();
       if (path != null) {
-        print("Recording saved at: $path");
         _timer?.cancel();
         setState(() {
           recordedFilePath = path;
@@ -357,10 +402,24 @@ Future<void> _stopRecording() async {
         });
 
     } else {
-      print("Recording failed to save.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Recording failed to save. ",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
+            backgroundColor: Color(0xFFECE3A3),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(bottom: 100,left: 10,right: 10),
+
+          ),
+        );
     }
   } catch (e) {
-    print("Stop recording error: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Stop recording error ",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
+        backgroundColor: Color(0xFFECE3A3),
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(bottom: 100,left: 10,right: 10),
+
+      ),
+    );
   }
 }
 
@@ -369,12 +428,16 @@ Future<void> _stopRecording() async {
 Widget saveButton(){
     return Bounceable(
       onTap: () {
-        if (recordedFilePath != null) {
-          print("Recording saved at: $recordedFilePath");
+        if (recordedFilePath != null && _firstController.text != "" && _secondController.text != "") {
           // You can navigate or store file
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Please record audio before saving")),
+            const SnackBar(content: Text("Please fill all the Required field",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
+              backgroundColor: Color(0xFFECE3A3),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(bottom: 100,left: 10,right: 10),
+
+            ),
           );
         }
       },
