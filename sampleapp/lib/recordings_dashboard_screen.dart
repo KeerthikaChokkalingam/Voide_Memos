@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
-
+import 'package:hive/hive.dart';
+import 'package:share_plus/share_plus.dart';
 import 'create_recording_screen.dart';
+import 'package:cross_file/cross_file.dart';
 
 class NewRecordingScreen extends StatefulWidget {
   const NewRecordingScreen({super.key});
@@ -11,14 +13,15 @@ class NewRecordingScreen extends StatefulWidget {
 }
 
 class _NewRecordingScreenState extends State<NewRecordingScreen> {
+  List userList = Hive.box('recordingsListData').get('recordingsList', defaultValue: []);
+
   @override
   Widget build(BuildContext context) {
-    int recordingsCount  = 0;
     return Scaffold(
       body: Column(
         children: [
           headerWidget(),
-          Expanded(child: recorderWidget(recordingsCount)),
+          Expanded(child: recorderWidget(userList.length)),
         ],
       ),
     );
@@ -26,12 +29,8 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
 
   Widget headerWidget() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
-
     final double firstImageWidth = screenWidth * 0.38;
     final double firstImageHeight = firstImageWidth * (202 / 197);
-    final double secondImageWidth = screenWidth * 0.8;
-    final double secondImageHeight = secondImageWidth * (320 / 320);
 
     return Container(
       height: 300,
@@ -57,7 +56,15 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
                 padding: const EdgeInsets.only(top: 40.0, right: 20.0),
                 child: Bounceable(
                   onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CreateRecordingScreen()));
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => const CreateRecordingScreen()),
+                    ).then((value) {
+                      if (value == true) {
+                        setState(() {
+                          userList = Hive.box('recordingsListData').get('recordingsList', defaultValue: []);
+                        });
+                      }
+                    });
                   },
                   child: Container(
                     width: 91,
@@ -81,36 +88,37 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
               )
             ],
           ),
-          Row(
-            children: [
-              Positioned(
-                left: screenWidth * 0.03 + (firstImageWidth * 0.30),
-                top: screenHeight * 0.45 - (secondImageHeight / 1.9),
-                child: const Padding(
-                  padding: EdgeInsets.only(left: 8.0),
+          SizedBox(
+            width: double.infinity,
+            height: 200,
+            child: Stack(
+              children: [
+                const Positioned(
+                  left: 16, // adjust based on your design
+                  top: 40,
                   child: Text(
                     'Record your \nAssignment',
                     style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 41,
-                        fontWeight: FontWeight.w900),
+                      color: Colors.white,
+                      fontSize: 41,
+                      fontWeight:FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                left: screenWidth * 0.03 + (firstImageWidth * 0.25),
-                top: screenHeight * 0.45 - (secondImageHeight / 1.9),
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
+                Positioned(
+                  right: 16, // adjust based on your design
+                  top: 20,
                   child: Image.asset(
                     'assets/images/Books-And-Headset.png',
-                    width: firstImageWidth,
-                    height: firstImageHeight,
+                    width: firstImageWidth,  // adjust width
+                    height: firstImageHeight, // adjust height
+                    fit: BoxFit.contain,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           )
+
         ],
       ),
     );
@@ -132,14 +140,28 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
         Container(
           padding: const EdgeInsets.only(top: 40,bottom: 30),
           child: ListView.builder(
-            itemCount: 0,
+            itemCount: userList.length,
             itemBuilder: (BuildContext context, int index) {
+              final item = userList[index];
               return Column(
                   children: <Widget>[
-                    Padding(
-                      padding: EdgeInsets.only(top:index == 0 ? 0 : 10.0,bottom:  index == 30 ? 50.0 : 10.0,left: 15.0,right: 15.0),
-                      child:
-                      recordCard(),
+                    Bounceable(
+    onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) =>  CreateRecordingScreen(tappedIndex: index)),
+                ).then((value) {
+                  if (value == true) {
+                    setState(() {
+                      userList = Hive.box('recordingsListData').get('recordingsList', defaultValue: []);
+                    });
+                  }
+                });
+              },
+                      child: Padding(
+                        padding: EdgeInsets.only(top:index == 0 ? 0 : 10.0,bottom:  index == 30 ? 50.0 : 10.0,left: 15.0,right: 15.0),
+                        child:
+                        recordCard(item['titleName'],item['topicName'],item["recordedStringFilePath"]),
+                      ),
                     ),
                     ]);
           },
@@ -184,7 +206,15 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
       child: Center(
         child: Bounceable(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => const CreateRecordingScreen()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) =>  const CreateRecordingScreen()),
+            ).then((value) {
+              if (value == true) {
+                setState(() {
+                  userList = Hive.box('recordingsListData').get('recordingsList', defaultValue: []);
+                });
+              }
+            });
           },
           child: const Text(
             '   +  New Recording   ',
@@ -236,7 +266,7 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
     );
   }
 
-  Widget recordCard() {
+  Widget recordCard(String recorderName,String recorderTopic,String recorderPath) {
     return Container(
           height: 100,
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -244,7 +274,7 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
     color: Colors.white,
     borderRadius: BorderRadius.circular(12),
     ),
-    child: const Row(
+    child:  Row(
     children: [
     Expanded(
     flex: 6,
@@ -253,18 +283,18 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
     Text(
-    "Assignment Name",
-    style: TextStyle(
+      recorderName,
+    style: const TextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 18,
     color: Colors.black,
     ),
     ),
     Padding(
-      padding: EdgeInsets.only(top: 10.0),
+      padding: const EdgeInsets.only(top: 10.0),
       child: Text(
-      "Topic",
-      style: TextStyle(
+        recorderTopic,
+      style: const TextStyle(
         fontWeight: FontWeight.normal,
       fontSize: 13,
       color: Color(0xFF7B88E0),
@@ -274,13 +304,23 @@ class _NewRecordingScreenState extends State<NewRecordingScreen> {
     ],
     ),
     ),
-    CircleAvatar(
-    backgroundColor: Color(0xFF5D5FEF),
-    radius: 20,
-    child: Icon(
-    Icons.play_arrow,
-    color: Colors.white,
-    ),
+    Bounceable(
+      onTap: () async {
+        final result = await Share.shareXFiles(
+          [XFile(recorderPath)],
+          text: recorderName,
+          subject: recorderTopic,
+        );
+        print(result);
+      },
+      child: const CircleAvatar(
+      backgroundColor: Color(0xFF5D5FEF),
+      radius: 20,
+      child: Icon(
+      Icons.share,
+      color: Colors.white,
+      ),
+      ),
     ),
     ],
     ),

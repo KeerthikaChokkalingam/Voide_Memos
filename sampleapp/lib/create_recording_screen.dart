@@ -2,13 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
+import 'package:hive/hive.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:record/record.dart';
 
 class CreateRecordingScreen extends StatefulWidget {
-const CreateRecordingScreen({super.key});
+  final int tappedIndex;
+ const CreateRecordingScreen({super.key,this.tappedIndex = -1});
 
 @override
 State<CreateRecordingScreen> createState() => CreateRecordingScreenState();
@@ -30,10 +32,23 @@ final TextEditingController _firstController = TextEditingController();
 final TextEditingController _secondController = TextEditingController();
 bool isPlaying = false;
 bool isPaused = false;
+final box = Hive.box('recordingsListData');
+bool isEditing = false;
+List userList = Hive.box('recordingsListData').get('recordingsList', defaultValue: []);
 
 @override
 void initState(){
   super.initState();
+  if(widget.tappedIndex != -1){
+    var selectedValue = userList[widget.tappedIndex];
+    _secondController.text = selectedValue["topicName"].toString();
+    recordedFilePath = selectedValue["recordedStringFilePath"].toString();
+    _firstController.text = selectedValue["titleName"].toString();
+    isEditing = true;
+  } else {
+    _firstController.text = "";
+    _secondController.text = "";
+  }
   _audioPlayer = AudioPlayer();
   _audioPlayer.playerStateStream.listen((state) {
     if (state.processingState == ProcessingState.completed) {
@@ -43,8 +58,6 @@ void initState(){
       });
     }
   });
-  _firstController.text = "";
-  _secondController.text = "";
 }
 @override
 void dispose(){
@@ -96,14 +109,12 @@ void dispose(){
                   padding: const EdgeInsets.only(top: 45),
                   child: Center(child: startRecording()),
                 ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40,left: 15,right: 15,top: 30),
+                  child: saveButton(),
+                ),
               ],
             ),
-          ),
-          Positioned(
-            bottom: 40,
-            left: 15,
-            right: 15,
-            child: saveButton(),
           ),
         ],
       ),
@@ -112,10 +123,11 @@ void dispose(){
 
 Widget topBackButtonTitle() {
   return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
     crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       Bounceable(onTap: () {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }, child:
       Container(
         height: 40,
@@ -157,7 +169,29 @@ Widget topBackButtonTitle() {
             ),
           ),
         ),
-      )
+      ),
+      Visibility(
+        visible: isEditing,
+        child: Bounceable(onTap: () {
+          deleteUser(widget.tappedIndex);
+        }, child:
+        Container(
+          height: 40,
+          width: 40,
+          decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10)
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.delete,
+              color: Color(0xFF5D5FEF),
+              size: 20,
+            ),
+          ),
+
+        ),),
+      ),
     ],
   );
 }
@@ -232,7 +266,7 @@ Widget recorderField() {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-           Text((recordedFilePath != null && _firstController.text.isNotEmpty) ? "${_firstController.text} Audio File" :"File Audio",style: const TextStyle(
+           Text((recordedFilePath != null && _firstController.text.isNotEmpty) ? "${_firstController.text} Audio File" :"Start Recording Your File",style: const TextStyle(
             color: Colors.grey,
             fontSize: 15,
             fontWeight: FontWeight.normal,
@@ -280,10 +314,12 @@ Widget recorderField() {
           ),
           Bounceable(
             onTap: () {
-              print("tapped delete");
+              setState(() {
+                recordedFilePath = null;
+              });
             },
             child: Visibility(
-              visible: recordedFilePath != null,
+              visible: recordedFilePath != null ,
               child: const Padding(
                 padding: EdgeInsets.only(left: 10.0),
                 child: Icon(Icons.delete,
@@ -369,13 +405,13 @@ void showSettingsDialog(BuildContext context) {
       content: const Text("Please enable microphone permission from settings."),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context), // Close dialog
+          onPressed: () => Navigator.of(context).pop(true),
           child: const Text("Cancel"),
         ),
         TextButton(
           onPressed: () {
             openAppSettings(); // Open device settings
-            Navigator.pop(context);
+            Navigator.of(context).pop(true);
           },
           child: const Text("Open Settings"),
         ),
@@ -457,12 +493,49 @@ Future<void> _stopRecording() async {
 }
 
 
-
+void addUserValue(String titleName,String topicName,String recordedStringFilePath) {
+  final existingList = box.get('recordingsList', defaultValue: []) as List;
+    existingList.add({'titleName': titleName,'topicName': topicName,'recordedStringFilePath':recordedStringFilePath});
+    box.put('recordingsList', existingList);
+}
+void deleteUser(int index) {
+  final box = Hive.box('recordingsListData');
+  final userList = box.get('recordingsList', defaultValue: []) as List;
+  userList.removeAt(index);
+  box.put('recordingsList', userList);
+  Navigator.of(context).pop(true);
+}
+void editUser(int index, String titleName,String topicName,String recordedStringFilePath) {
+  final box = Hive.box('recordingsListData');
+  final userList = box.get('recordingsList', defaultValue: []) as List;
+  userList[index]['titleName'] = titleName;
+  userList[index]['topicName'] = topicName;
+  userList[index]['recordedStringFilePath'] = recordedStringFilePath;
+  box.put('recordingsList', userList);
+}
 Widget saveButton(){
     return Bounceable(
       onTap: () {
         if (recordedFilePath != null && _firstController.text != "" && _secondController.text != "") {
-          // You can navigate or store file
+          if (isEditing) {
+            if (userList[widget.tappedIndex]["titleName"].toString() != (_firstController.text) || userList[widget.tappedIndex]["topicName"].toString() != (_secondController.text) || userList[widget.tappedIndex]["recordedStringFilePath"].toString() != (recordedFilePath.toString())){
+              editUser(widget.tappedIndex,_firstController.text, _secondController.text,
+                  recordedFilePath!);
+              Navigator.of(context).pop(true);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("The same Recording already exists",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
+                  backgroundColor: Color(0xFFECE3A3),
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.only(bottom: 80,left: 10,right: 10),
+                ),
+              );
+            }
+          } else {
+            addUserValue(_firstController.text, _secondController.text,
+                recordedFilePath!);
+            Navigator.of(context).pop(true);
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Please fill all the Required field",style: TextStyle(color: Colors.black,),textAlign: TextAlign.center,),
