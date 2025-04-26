@@ -1,6 +1,6 @@
+import 'package:VoiceMemos/recordings_dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bounceable/flutter_bounceable.dart';
-import 'package:sampleapp/recordings_dashboard_screen.dart';
 
 class IntroductionScreen extends StatefulWidget {
   const IntroductionScreen({super.key});
